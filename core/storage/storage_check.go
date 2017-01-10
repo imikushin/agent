@@ -15,14 +15,11 @@ func IsVolumeActive(volume model.Volume, storagePool model.StoragePool, dockerCl
 	if !isManagedVolume(volume) {
 		return true, nil
 	}
-	vol, err := dockerClient.VolumeInspect(context.Background(), volume.Name)
+	_, err := dockerClient.VolumeInspect(context.Background(), volume.Name)
 	if client.IsErrVolumeNotFound(err) {
 		return false, nil
 	} else if err != nil {
 		return false, errors.Wrap(err, constants.IsVolumeActiveError)
-	}
-	if vol.Mountpoint != "" {
-		return vol.Mountpoint != "moved", nil
 	}
 	return true, nil
 }

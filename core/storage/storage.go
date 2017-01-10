@@ -31,20 +31,6 @@ func DoVolumeActivate(volume model.Volume, storagePool model.StoragePool, progre
 		}
 	}
 
-	// Rancher longhorn volumes indicate when they've been moved to a
-	// different host. If so, we have to delete before we create
-	// to cleanup the reference in docker.
-
-	vol, err := client.VolumeInspect(context.Background(), volume.Name)
-	if err != nil {
-		if vol.Mountpoint == "moved" {
-			logrus.Info(fmt.Sprintf("Removing moved volume %s so that it can be re-added.", volume.Name))
-			if err := client.VolumeRemove(context.Background(), volume.Name, true); err != nil {
-				return errors.Wrap(err, constants.DoVolumeActivateError+"failed to remove volume")
-			}
-		}
-	}
-
 	options := types.VolumeCreateRequest{
 		Name:       volume.Name,
 		Driver:     driver,
@@ -53,6 +39,16 @@ func DoVolumeActivate(volume model.Volume, storagePool model.StoragePool, progre
 	_, err1 := client.VolumeCreate(context.Background(), options)
 	if err1 != nil {
 		return errors.Wrap(err1, constants.DoVolumeActivateError+"failed to create volume")
+	}
+	return nil
+}
+
+func DoVolumeAttach(volume model.Volume) error {
+	if !isManagedVolume(volume) {
+		return nil
+	}
+	if err := CallVolumeDriverAttach(volume); err != nil {
+		errors.Wrap(err, constants.DoVolumeAttachError+"failed to attach volume")
 	}
 	return nil
 }
